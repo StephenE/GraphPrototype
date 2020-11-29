@@ -10,5 +10,6 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="0.9.12" />
     <PackageReference Include="Avalonia.Desktop" Version="0.9.12" />
+    <PackageReference Include="ScottPlot.Avalonia" Version="4.0.45" />
   </ItemGroup>
 </Project>
