@@ -36,6 +36,62 @@ namespace GraphPrototype.BMP3
 
 		public double t_lin;
 
+		private static ushort BMP3_CONCAT_BYTES(byte msb, byte lsb)
+		{
+			return (ushort)((msb << 8) | lsb);
+		}
+
+		public static QuantizedCalibrationData ParseCalibrationData(byte[] reg_data)
+		{
+			CalibrationData reg_calib_data = new CalibrationData();
+			QuantizedCalibrationData quantized_calib_data = new QuantizedCalibrationData();
+			double temp_var14 = 0.00390625;
+			reg_calib_data.par_t1 = BMP3_CONCAT_BYTES(reg_data[1], reg_data[0]);
+			quantized_calib_data.par_t1 = (double)(int)reg_calib_data.par_t1 / temp_var14;
+			reg_calib_data.par_t2 = BMP3_CONCAT_BYTES(reg_data[3], reg_data[2]);
+			temp_var14 = 1073741824.0;
+			quantized_calib_data.par_t2 = (double)(int)reg_calib_data.par_t2 / temp_var14;
+			reg_calib_data.par_t3 = (sbyte)reg_data[4];
+			temp_var14 = 281474976710656.0;
+			quantized_calib_data.par_t3 = (double)reg_calib_data.par_t3 / temp_var14;
+			reg_calib_data.par_p1 = (short)BMP3_CONCAT_BYTES(reg_data[6], reg_data[5]);
+			temp_var14 = 1048576.0;
+			quantized_calib_data.par_p1 = (double)(reg_calib_data.par_p1 - 16384) / temp_var14;
+			reg_calib_data.par_p2 = (short)BMP3_CONCAT_BYTES(reg_data[8], reg_data[7]);
+			temp_var14 = 536870912.0;
+			quantized_calib_data.par_p2 = (double)(reg_calib_data.par_p2 - 16384) / temp_var14;
+			reg_calib_data.par_p3 = (sbyte)reg_data[9];
+			temp_var14 = 4294967296.0;
+			quantized_calib_data.par_p3 = (double)reg_calib_data.par_p3 / temp_var14;
+			reg_calib_data.par_p4 = (sbyte)reg_data[10];
+			temp_var14 = 137438953472.0;
+			quantized_calib_data.par_p4 = (double)reg_calib_data.par_p4 / temp_var14;
+			reg_calib_data.par_p5 = BMP3_CONCAT_BYTES(reg_data[12], reg_data[11]);
+			temp_var14 = 0.125;
+			quantized_calib_data.par_p5 = (double)(int)reg_calib_data.par_p5 / temp_var14;
+			reg_calib_data.par_p6 = BMP3_CONCAT_BYTES(reg_data[14], reg_data[13]);
+			temp_var14 = 64.0;
+			quantized_calib_data.par_p6 = (double)(int)reg_calib_data.par_p6 / temp_var14;
+			reg_calib_data.par_p7 = (sbyte)reg_data[15];
+			temp_var14 = 256.0;
+			quantized_calib_data.par_p7 = (double)reg_calib_data.par_p7 / temp_var14;
+			reg_calib_data.par_p8 = (sbyte)reg_data[16];
+			temp_var14 = 32768.0;
+			quantized_calib_data.par_p8 = (double)reg_calib_data.par_p8 / temp_var14;
+			reg_calib_data.par_p9 = (short)BMP3_CONCAT_BYTES(reg_data[18], reg_data[17]);
+			temp_var14 = 281474976710656.0;
+			quantized_calib_data.par_p9 = (double)reg_calib_data.par_p9 / temp_var14;
+			reg_calib_data.par_p10 = (sbyte)reg_data[19];
+			temp_var14 = 281474976710656.0;
+			quantized_calib_data.par_p10 = (double)reg_calib_data.par_p10 / temp_var14;
+			reg_calib_data.par_p11 = (sbyte)reg_data[20];
+			temp_var14 = 3.6893488147419103E+19;
+			quantized_calib_data.par_p11 = (double)reg_calib_data.par_p11 / temp_var14;
+			reg_calib_data.t_lin = 0L;
+			quantized_calib_data.t_lin = 0.0;
+			return quantized_calib_data;
+		}
+
 		public double CompensateTemperature(uint uncomp_temp)
 		{
 			double partial_data3 = uncomp_temp - par_t1;

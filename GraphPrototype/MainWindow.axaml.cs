@@ -20,6 +20,7 @@ namespace GraphPrototype
             AvaloniaXamlLoader.Load(this);
 
             Sensor = new BMP3.Sensor();
+            Sensor.Initialise().Wait();
 
             var avaplot1 = this.Find<AvaPlot>("avaPlot1");
 
