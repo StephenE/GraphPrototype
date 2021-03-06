@@ -19,6 +19,8 @@ namespace GraphPrototype
         {
             AvaloniaXamlLoader.Load(this);
 
+            Sensor = new BMP3.Sensor();
+
             var avaplot1 = this.Find<AvaPlot>("avaPlot1");
 
             double[] dataX = new double[] { 1, 2, 3, 4, 5 };
@@ -26,5 +28,7 @@ namespace GraphPrototype
             avaplot1.plt.PlotScatter(dataX, dataY);
             avaplot1.Render();
         }
+
+        private BMP3.Sensor Sensor { get; set; }
     }
 }
