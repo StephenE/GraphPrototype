@@ -34,7 +34,7 @@ namespace GraphPrototype.BMP3
 			Device = Pi.I2C.AddDevice(deviceId);
 		}
 
-		public async Task Initialise()
+		public void Initialise()
 		{
 			Log.Information("Prepairing Sensor");
 			byte deviceId = Device.ReadAddressByte(BMP388RegisterChipId);
@@ -44,26 +44,22 @@ namespace GraphPrototype.BMP3
 				return;
 			}
 
-			await SoftReset();
+			SoftReset();
 			CalibrationData = ReadCalibrationData();
 			SetPowerState();
 			SetOdrFilter();
 			SetIirFilter();
 			SetMode();
-			uint pressureData = ReadThreeBytesData(4);
-			uint temperatureData = ReadThreeBytesData(7);
-			double temperature = CalibrationData.CompensateTemperature(temperatureData);
-			double millibars = CalibrationData.CompensatePressure(pressureData) / 100.0 + 8.34;
-			Log.Information($"Read temperature {temperature}, pressure {millibars}");
+			ReadPressure();
 		}
 
-		public async Task SoftReset()
+		public void SoftReset()
 		{
 			Status sensorStatus = (Status)Device.ReadAddressByte(BMP388RegisterStatus);
 			if (sensorStatus == Status.Ready)
 			{
-				Device.WriteAddressByte(BMP388RegisterCommand, 182);
-				await Task.Delay(2);
+				Device.WriteAddressByte(BMP388RegisterCommand, (byte)Commands.SoftReset);
+				Thread.Sleep(2);
 				byte errorCode = Device.ReadAddressByte(BMP388RegisterErrorCode);
 				Log.Information($"Soft Reset Outcome: 0x{errorCode:x}");
 			}
@@ -73,25 +69,52 @@ namespace GraphPrototype.BMP3
 			}
 		}
 
+		public double ReadPressure()
+		{
+			TriggerReading();
+			Thread.Sleep(2);
+
+			uint pressureData = ReadThreeBytesData(4);
+			uint temperatureData = ReadThreeBytesData(7);
+			double temperature = CalibrationData.CompensateTemperature(temperatureData);
+			double millibars = CalibrationData.CompensatePressure(pressureData) / 100.0 + 8.34;
+			Log.Information($"Read temperature {temperature}, pressure {millibars}");
+			return millibars;
+		}
+
 		private QuantizedCalibrationData ReadCalibrationData()
 		{
 			Device.Write((byte)BMP388RegisterCalibration);
 			return QuantizedCalibrationData.ParseCalibrationData(Device.Read(21));
 		}
 
+		/// <summary>
+		/// Wakes up the sensor to do a single reading
+		/// </summary>
+		private void TriggerReading()
+		{
+			byte powerState = Device.ReadAddressByte(BMP388RegisterPowerControl);
+			powerState = (byte)(powerState & 0b11001111);
+			powerState = (byte)(powerState | 0b00100000); // Set bit to trigger a reading
+			Device.WriteAddressByte(BMP388RegisterPowerControl, powerState);
+		}
+
+		/// <summary>
+		///  Puts the chip into sleep mode and turns on the sensors for future readings
+		/// </summary>
 		private void SetPowerState()
 		{
 			byte powerState3 = Device.ReadAddressByte(BMP388RegisterPowerControl);
-			powerState3 = (byte)(powerState3 & 0xCC);
-			powerState3 = (byte)(powerState3 | 3);
+			powerState3 = (byte)(powerState3 & 0b11001100);
+			powerState3 = (byte)(powerState3 | 0b00000011);
 			Device.WriteAddressByte(BMP388RegisterPowerControl, powerState3);
 		}
 
 		private void SetOdrFilter()
 		{
 			byte osrState3 = Device.ReadAddressByte(BMP388RegisterOsr);
-			osrState3 = (byte)(osrState3 & 0xC0);
-			osrState3 = (byte)(osrState3 | 0);
+			osrState3 = (byte)(osrState3 & 0b11000000);
+			osrState3 = (byte)(osrState3 | 0b00001011);
 			Device.WriteAddressByte(BMP388RegisterOsr, osrState3);
 			byte odrState3 = Device.ReadAddressByte(BMP388RegisterOdr);
 			odrState3 = (byte)(odrState3 & 0xE0);
@@ -102,8 +125,8 @@ namespace GraphPrototype.BMP3
 		private void SetIirFilter()
 		{
 			byte iirFilter3 = Device.ReadAddressByte(BMP388RegisterIirFilter);
-			iirFilter3 = (byte)(iirFilter3 & 0xF1);
-			iirFilter3 = (byte)(iirFilter3 | 0);
+			iirFilter3 = (byte)(iirFilter3 & 0b11110001);
+			iirFilter3 = (byte)(iirFilter3 | 0b00001000);
 			Device.WriteAddressByte(BMP388RegisterIirFilter, iirFilter3);
 		}
 
