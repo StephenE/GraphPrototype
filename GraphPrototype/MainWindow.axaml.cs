@@ -67,7 +67,7 @@ namespace GraphPrototype
         /// <remarks>
         /// Use Paint to figure out the red, green and blue values
         /// </remarks>
-        System.Drawing.Color GridLinesColor => System.Drawing.Color.FromArgb(red: 0, green: 0, blue: 0);
+        System.Drawing.Color GridLinesColor => System.Drawing.Color.FromArgb(red: 150, green: 150, blue: 150);
 
         private void InitializeComponent()
         {
