@@ -46,9 +46,28 @@ namespace GraphPrototype
 #endif
         }
 
-        TimeSpan GraphDuration => TimeSpan.FromHours(6);
-        TimeSpan ReadingFrequency => TimeSpan.FromMinutes(5);
-        
+        /// <summary>
+        /// How much time is shown on the graph
+        /// </summary>
+        TimeSpan GraphDuration => TimeSpan.FromHours(1);
+        /// <summary>
+        /// How often we read the pressure
+        /// </summary>
+        TimeSpan ReadingFrequency => TimeSpan.FromMinutes(1);
+        /// <summary>
+        /// How many decimal places to show on the X Axis
+        /// </summary>
+        /// <remarks>
+        /// F2: Two decimal places. F3: Three decimal places
+        /// </remarks>
+        string XAxisFormat = "F2";
+        /// <summary>
+        /// What colour are the grid lines
+        /// </summary>
+        /// <remarks>
+        /// Use Paint to figure out the red, green and blue values
+        /// </remarks>
+        System.Drawing.Color GridLinesColor => System.Drawing.Color.FromArgb(red: 0, green: 0, blue: 0);
 
         private void InitializeComponent()
         {
@@ -75,7 +94,8 @@ namespace GraphPrototype
             }
 
             Series = Graph.plt.PlotScatter(dataX, dataY);
-            Graph.plt.Ticks(numericFormatStringY: "F2", dateTimeX: true, dateTimeFormatStringX: "HH:mm");
+            Graph.plt.Ticks(numericFormatStringY: XAxisFormat, dateTimeX: true, dateTimeFormatStringX: "HH:mm");
+            Graph.plt.Grid(color: GridLinesColor);
             UpdateAxis(viewModel.ReadingTime);
             Graph.Render();
 
@@ -91,17 +111,20 @@ namespace GraphPrototype
             try
             {
                 var viewModel = DataContext as MainWindowViewModel;
-                UpdateViewModel(viewModel);
+                bool hasNewReading = UpdateViewModel(viewModel);
 
-                Log.Information("Updating Graph");
-                Array.Copy(Series.xs, 1, Series.xs, 0, Series.xs.Length - 1);
-                Array.Copy(Series.ys, 1, Series.ys, 0, Series.ys.Length - 1);
-                Series.xs[Series.xs.Length - 1] = viewModel.ReadingTime.ToOADate();
-                Series.ys[Series.ys.Length - 1] = viewModel.Pressure;
-                UpdateAxis(viewModel.ReadingTime);
+                if (hasNewReading)
+                {
+                    Log.Information("Updating Graph");
+                    Array.Copy(Series.xs, 1, Series.xs, 0, Series.xs.Length - 1);
+                    Array.Copy(Series.ys, 1, Series.ys, 0, Series.ys.Length - 1);
+                    Series.xs[Series.xs.Length - 1] = viewModel.ReadingTime.ToOADate();
+                    Series.ys[Series.ys.Length - 1] = viewModel.Pressure;
+                    UpdateAxis(viewModel.ReadingTime);
 
-                Log.Information("Rendering Graph");
-                Graph.Render();
+                    Log.Information("Rendering Graph");
+                    Graph.Render();
+                }
                 Log.Information("Ending tick");
             }
             catch(Exception error)
@@ -111,7 +134,7 @@ namespace GraphPrototype
             }
         }
 
-        private void UpdateViewModel(MainWindowViewModel viewModel)
+        private bool UpdateViewModel(MainWindowViewModel viewModel)
         {
             viewModel.CurrentTime = DateTime.Now;
 
@@ -120,6 +143,12 @@ namespace GraphPrototype
             {
                 viewModel.Pressure = Sensor.ReadPressure();
                 viewModel.ReadingTime = RoundTime(viewModel.CurrentTime);
+
+                return true;
+            }
+            else
+            {
+                return false;
             }
         }
 

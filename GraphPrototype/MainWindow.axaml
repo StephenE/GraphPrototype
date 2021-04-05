@@ -9,8 +9,8 @@
 
   <StackPanel>
     <StackPanel Orientation="Horizontal">
-      <TextBlock Text="{Binding CurrentTime, StringFormat = '\{0:HH:mm:ss\} '}" FontSize="50" />
-      <TextBlock Text="{Binding Pressure, StringFormat = '\{0:0.00\} mb'}" FontSize="50" Margin="80,0,0,0"/>
+      <TextBlock Text="{Binding CurrentTime, StringFormat = '\{0:        ddd dd MMM HH:mm:ss\} '}" FontSize="30" />
+      <TextBlock Text="{Binding Pressure, StringFormat = '\{0:0.00\} mb'}" FontSize="30" Margin="80,0,0,0"/>
     </StackPanel>
 	  <ScottPlotAva:AvaPlot x:Name="avaPlot1" Height="400" />
   </StackPanel>
