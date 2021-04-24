@@ -49,11 +49,11 @@ namespace GraphPrototype
         /// <summary>
         /// How much time is shown on the graph
         /// </summary>
-        TimeSpan GraphDuration => TimeSpan.FromHours(1);
+        TimeSpan GraphDuration => TimeSpan.FromHours(48);
         /// <summary>
         /// How often we read the pressure
         /// </summary>
-        TimeSpan ReadingFrequency => TimeSpan.FromMinutes(1);
+        TimeSpan ReadingFrequency => TimeSpan.FromMinutes(5);
         /// <summary>
         /// How many decimal places to show on the X Axis
         /// </summary>
