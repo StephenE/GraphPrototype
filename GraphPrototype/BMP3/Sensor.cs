@@ -16,7 +16,7 @@ using Unosquare.WiringPi;
 
 namespace GraphPrototype.BMP3
 {
-	public class Sensor
+	public class Sensor : ISensor
 	{
 		private int BMP388RegisterChipId => 0;
 		private int BMP388RegisterErrorCode => 2;
@@ -27,6 +27,13 @@ namespace GraphPrototype.BMP3
 		private int BMP388RegisterIirFilter => 31;
 		private int BMP388RegisterCalibration => 49;
 		private int BMP388RegisterCommand => 126;
+
+		public static Sensor Create()
+        {
+			var newSensor = new Sensor();
+			newSensor.Initialise();
+			return newSensor;
+		}
 
 		public Sensor(int deviceId = 119)
 		{

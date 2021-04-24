@@ -49,7 +49,7 @@ namespace GraphPrototype
         /// <summary>
         /// How much time is shown on the graph
         /// </summary>
-        TimeSpan GraphDuration => TimeSpan.FromHours(48);
+        TimeSpan GraphDuration => TimeSpan.FromDays(7);
         /// <summary>
         /// How often we read the pressure
         /// </summary>
@@ -68,15 +68,32 @@ namespace GraphPrototype
         /// Use Paint to figure out the red, green and blue values
         /// </remarks>
         System.Drawing.Color GridLinesColor => System.Drawing.Color.FromArgb(red: 150, green: 150, blue: 150);
+        /// <summary>
+        /// X Axis will auto-scroll if the time shown on the right is within this threshold
+        /// </summary>
+        TimeSpan XAxisAutoScrollSnap => TimeSpan.FromMinutes(2);
+        /// <summary>
+        /// When auto-scrolling the Y axis, what faction of padding to add when shifting up/down
+        /// </summary>
+        /// <remarks>
+        /// 1/100.0f is 1%
+        /// </remarks>
+        double YAxisScrollPadding => 1 / 100.0f;
 
         private void InitializeComponent()
         {
             AvaloniaXamlLoader.Load(this);
 
-            // Prepare sensor
-            Sensor = new BMP3.Sensor();
-            Sensor.Initialise();
-
+            // Prepare sensor. Use a real sensor on Arm, or a fake on Windows
+            if (System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm || System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64)
+            {
+                Sensor = BMP3.Sensor.Create();
+            }
+            else
+            {
+                Sensor = new BMP3.FakeSensor();
+            }
+            
             // Take first reading
             var viewModel = DataContext as MainWindowViewModel;
             UpdateViewModel(viewModel);
@@ -96,7 +113,7 @@ namespace GraphPrototype
             Series = Graph.plt.PlotScatter(dataX, dataY);
             Graph.plt.Ticks(numericFormatStringY: XAxisFormat, dateTimeX: true, dateTimeFormatStringX: "HH:mm");
             Graph.plt.Grid(color: GridLinesColor);
-            UpdateAxis(viewModel.ReadingTime);
+            UpdateAxis(viewModel.ReadingTime, autoAxis: true);
             Graph.Render();
 
             // Set refresh frequency
@@ -120,7 +137,7 @@ namespace GraphPrototype
                     Array.Copy(Series.ys, 1, Series.ys, 0, Series.ys.Length - 1);
                     Series.xs[Series.xs.Length - 1] = viewModel.ReadingTime.ToOADate();
                     Series.ys[Series.ys.Length - 1] = viewModel.Pressure;
-                    UpdateAxis(viewModel.ReadingTime);
+                    UpdateAxis(viewModel.ReadingTime, autoAxis: false);
 
                     Log.Information("Rendering Graph");
                     Graph.Render();
@@ -171,17 +188,64 @@ namespace GraphPrototype
             }
         }
 
-        private void UpdateAxis(DateTime readingTime)
+        private void UpdateAxis(DateTime readingTime, bool autoAxis)
         {
-            // Adjust X axis to current duration, latest reading on the right
-            Graph.plt.Axis(x1: (readingTime - GraphDuration).ToOADate(), x2: readingTime.ToOADate());
-            Graph.plt.AxisAutoY();
+            if (autoAxis)
+            {
+                // Adjust X axis to current duration, latest reading on the right
+                Graph.plt.Axis(x1: (readingTime - GraphDuration).ToOADate(), x2: readingTime.ToOADate());
+                Graph.plt.AxisAutoY();
+            }
+            else
+            {
+                var axisSettings = Graph.plt.Axis();
+
+                if (axisSettings[AxisXMaxIndex] > readingTime.ToOADate())
+                {
+                    // The graph is showing the future. Take no action
+                }
+                else if(axisSettings[AxisXMaxIndex] >= (readingTime - XAxisAutoScrollSnap).ToOADate())
+                {
+                    // The graph was showing the future, but our new reading goes off the end. Auto-scroll the X
+                    axisSettings[AxisXMaxIndex] = readingTime.ToOADate();
+
+                    // Expand the Y so the new value fits on
+                    double readingValue = Series.ys[Series.ys.Length - 1];
+                    double scrollAmount = 0;
+                    if (axisSettings[AxisYMinIndex] > readingValue)
+                    {
+                        // New value is off the bottom, so scroll down
+                        double padding = (axisSettings[AxisYMaxIndex] - axisSettings[AxisYMinIndex]) * YAxisScrollPadding;
+                        scrollAmount = (readingValue - axisSettings[AxisYMinIndex]) - padding;
+                    }
+                    else if (axisSettings[AxisYMaxIndex] < readingValue)
+                    {
+                        // New value is off the top, so scroll up
+                        double padding = (axisSettings[AxisYMaxIndex] - axisSettings[AxisYMinIndex]) * YAxisScrollPadding;
+                        scrollAmount = (readingValue - axisSettings[AxisYMaxIndex]) + padding;
+                    }
+
+                    axisSettings[AxisYMinIndex] += scrollAmount;
+                    axisSettings[AxisYMaxIndex] += scrollAmount;
+
+                    // Apply the axis settings
+                    Graph.plt.Axis(axisSettings);
+                }
+                else
+                {
+                    // The graph is showing the past. Take no action
+                }
+            }
         }
 
+        private int AxisXMinIndex => 0;
+        private int AxisXMaxIndex => 1;
+        private int AxisYMinIndex => 2;
+        private int AxisYMaxIndex => 3;
+
         private DispatcherTimer RefreshTimer { get; set; } = new DispatcherTimer();
-        private BMP3.Sensor Sensor { get; set; }
+        private BMP3.ISensor Sensor { get; set; }
         private AvaPlot Graph { get; set; }
         private ScottPlot.PlottableScatter Series { get; set; }
-        private int readingIndex = 0;
     }
 }
