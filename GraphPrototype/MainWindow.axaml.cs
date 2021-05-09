@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using ReactiveUI;
@@ -29,9 +30,23 @@ namespace GraphPrototype
             set => this.RaiseAndSetIfChanged(ref m_Pressure, value);
         }
 
+        public bool EnableAutoScrollButton
+        {
+            get => m_EnableAutoScrollButton;
+            set => this.RaiseAndSetIfChanged(ref m_EnableAutoScrollButton, value);
+        }
+
+        public bool DoAutoScroll { get; set; } = false;
+
+        public void OnResetAutoScroll()
+        {
+            DoAutoScroll = true;
+        }
+
         private double m_Pressure = 999;
         private DateTime m_CurrentTime = DateTime.MinValue;
         private DateTime m_ReadingTime = DateTime.MinValue;
+        private bool m_EnableAutoScrollButton = false;
     }
 
     public class MainWindow : Window
@@ -121,7 +136,7 @@ namespace GraphPrototype
             Series = Graph.plt.PlotScatter(dataX, dataY);
             Graph.plt.Ticks(numericFormatStringY: XAxisFormat, dateTimeX: true, dateTimeFormatStringX: "HH:mm");
             Graph.plt.Grid(color: GridLinesColor);
-            UpdateAxis(viewModel.ReadingTime, autoAxis: true);
+            UpdateAxis(viewModel, autoAxis: true);
             Graph.Render();
 
             // Set refresh frequency
@@ -145,10 +160,16 @@ namespace GraphPrototype
                     Array.Copy(Series.ys, 1, Series.ys, 0, Series.ys.Length - 1);
                     Series.xs[Series.xs.Length - 1] = viewModel.ReadingTime.ToOADate();
                     Series.ys[Series.ys.Length - 1] = viewModel.Pressure;
-                    UpdateAxis(viewModel.ReadingTime, autoAxis: AutoAxis);
+                    UpdateAxis(viewModel, autoAxis: AutoAxis || viewModel.DoAutoScroll);
+                    viewModel.DoAutoScroll = false;
 
                     Log.Information("Rendering Graph");
                     Graph.Render();
+                }
+                else if(viewModel.DoAutoScroll)
+                {
+                    UpdateAxis(viewModel, autoAxis: true);
+                    viewModel.DoAutoScroll = false;
                 }
                 Log.Information("Ending tick");
             }
@@ -196,26 +217,27 @@ namespace GraphPrototype
             }
         }
 
-        private void UpdateAxis(DateTime readingTime, bool autoAxis)
+        private void UpdateAxis(MainWindowViewModel viewModel, bool autoAxis)
         {
             if (autoAxis)
             {
                 // Adjust X axis to current duration, latest reading on the right
-                Graph.plt.Axis(x1: (readingTime - GraphDuration).ToOADate(), x2: readingTime.ToOADate());
+                Graph.plt.Axis(x1: (viewModel.ReadingTime - GraphDuration).ToOADate(), x2: viewModel.ReadingTime.ToOADate());
                 Graph.plt.AxisAutoY();
             }
             else
             {
                 var axisSettings = Graph.plt.Axis();
 
-                if (axisSettings[AxisXMaxIndex] > readingTime.ToOADate())
+                if (axisSettings[AxisXMaxIndex] > viewModel.ReadingTime.ToOADate())
                 {
                     // The graph is showing the future. Take no action
+                    viewModel.EnableAutoScrollButton = true;
                 }
-                else if(axisSettings[AxisXMaxIndex] >= (readingTime - XAxisAutoScrollSnap).ToOADate())
+                else if(axisSettings[AxisXMaxIndex] >= (viewModel.ReadingTime - XAxisAutoScrollSnap).ToOADate())
                 {
                     // The graph was showing the future, but our new reading goes off the end. Auto-scroll the X
-                    axisSettings[AxisXMaxIndex] = readingTime.ToOADate();
+                    axisSettings[AxisXMaxIndex] = viewModel.ReadingTime.ToOADate();
 
                     // Expand the Y so the new value fits on
                     double readingValue = Series.ys[Series.ys.Length - 1];
@@ -238,13 +260,17 @@ namespace GraphPrototype
 
                     // Apply the axis settings
                     Graph.plt.Axis(axisSettings);
+                    viewModel.EnableAutoScrollButton = false;
                 }
                 else
                 {
                     // The graph is showing the past. Take no action
+                    viewModel.EnableAutoScrollButton = true;
                 }
             }
         }
+
+        
 
         private int AxisXMinIndex => 0;
         private int AxisXMaxIndex => 1;
