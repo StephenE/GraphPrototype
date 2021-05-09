@@ -49,7 +49,7 @@ namespace GraphPrototype
         /// <summary>
         /// How much time is shown on the graph
         /// </summary>
-        TimeSpan GraphDuration => TimeSpan.FromDays(7);
+        TimeSpan GraphDuration => TimeSpan.FromDays(2);
         /// <summary>
         /// How often we read the pressure
         /// </summary>
@@ -68,6 +68,11 @@ namespace GraphPrototype
         /// Use Paint to figure out the red, green and blue values
         /// </remarks>
         System.Drawing.Color GridLinesColor => System.Drawing.Color.FromArgb(red: 150, green: 150, blue: 150);
+        /// <summary>
+        /// Set to true to use the auto axis provided by ScottPlot.
+        /// Set to false to use our own custom scrolling logic.
+        /// </summary>
+        bool AutoAxis => true;
         /// <summary>
         /// X Axis will auto-scroll if the time shown on the right is within this threshold
         /// </summary>
@@ -137,7 +142,7 @@ namespace GraphPrototype
                     Array.Copy(Series.ys, 1, Series.ys, 0, Series.ys.Length - 1);
                     Series.xs[Series.xs.Length - 1] = viewModel.ReadingTime.ToOADate();
                     Series.ys[Series.ys.Length - 1] = viewModel.Pressure;
-                    UpdateAxis(viewModel.ReadingTime, autoAxis: false);
+                    UpdateAxis(viewModel.ReadingTime, autoAxis: AutoAxis);
 
                     Log.Information("Rendering Graph");
                     Graph.Render();
