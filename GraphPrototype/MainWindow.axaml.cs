@@ -72,12 +72,11 @@ namespace GraphPrototype
         /// Set to true to use the auto axis provided by ScottPlot.
         /// Set to false to use our own custom scrolling logic.
         /// </summary>
-        bool AutoAxis => true;
+        bool AutoAxis => false;
         /// <summary>
         /// X Axis will auto-scroll if the time shown on the right is within this threshold
-        /// </summary>Hell
-        /// 
-        TimeSpan XAxisAutoScrollSnap => TimeSpan.FromMinutes(2);
+        /// </summary>
+        TimeSpan XAxisAutoScrollSnap => ReadingFrequency * 2;
         /// <summary>
         /// When auto-scrolling the Y axis, what faction of padding to add when shifting up/down
         /// </summary>
@@ -94,12 +93,14 @@ namespace GraphPrototype
             if (System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm || System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64)
             {
                 PressureSensor = BMP3.Sensor.Create();
+                ClockSensor = new Clock.SystemClock();
             }
             else
             {
                 PressureSensor = new BMP3.FakeSensor();
+                ClockSensor = new Clock.FakeClock { SpeedOfTime = 200 };
             }
-            ClockSensor = new Clock.SystemClock();
+            
             
             // Take first reading
             var viewModel = DataContext as MainWindowViewModel;
