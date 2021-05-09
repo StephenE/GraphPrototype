@@ -75,7 +75,8 @@ namespace GraphPrototype
         bool AutoAxis => true;
         /// <summary>
         /// X Axis will auto-scroll if the time shown on the right is within this threshold
-        /// </summary>
+        /// </summary>Hell
+        /// 
         TimeSpan XAxisAutoScrollSnap => TimeSpan.FromMinutes(2);
         /// <summary>
         /// When auto-scrolling the Y axis, what faction of padding to add when shifting up/down
@@ -92,12 +93,13 @@ namespace GraphPrototype
             // Prepare sensor. Use a real sensor on Arm, or a fake on Windows
             if (System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm || System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64)
             {
-                Sensor = BMP3.Sensor.Create();
+                PressureSensor = BMP3.Sensor.Create();
             }
             else
             {
-                Sensor = new BMP3.FakeSensor();
+                PressureSensor = new BMP3.FakeSensor();
             }
+            ClockSensor = new Clock.SystemClock();
             
             // Take first reading
             var viewModel = DataContext as MainWindowViewModel;
@@ -158,12 +160,12 @@ namespace GraphPrototype
 
         private bool UpdateViewModel(MainWindowViewModel viewModel)
         {
-            viewModel.CurrentTime = DateTime.Now;
+            viewModel.CurrentTime = ClockSensor.Now;
 
             // Update the reading once the duration set by ReadingFrequency has passed
             if (viewModel.ReadingTime + ReadingFrequency <= viewModel.CurrentTime)
             {
-                viewModel.Pressure = Sensor.ReadPressure();
+                viewModel.Pressure = PressureSensor.ReadPressure();
                 viewModel.ReadingTime = RoundTime(viewModel.CurrentTime);
 
                 return true;
@@ -249,7 +251,8 @@ namespace GraphPrototype
         private int AxisYMaxIndex => 3;
 
         private DispatcherTimer RefreshTimer { get; set; } = new DispatcherTimer();
-        private BMP3.ISensor Sensor { get; set; }
+        private BMP3.ISensor PressureSensor { get; set; }
+        private Clock.IClock ClockSensor { get; set; }
         private AvaPlot Graph { get; set; }
         private ScottPlot.PlottableScatter Series { get; set; }
     }
