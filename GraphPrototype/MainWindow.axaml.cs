@@ -36,7 +36,7 @@ namespace GraphPrototype
             set => this.RaiseAndSetIfChanged(ref m_EnableAutoScrollButton, value);
         }
 
-        public bool DoAutoScroll { get; set; } = false;
+        public bool DoAutoScroll { get; set; } = true;
 
         public void OnResetAutoScroll()
         {
@@ -57,7 +57,7 @@ namespace GraphPrototype
 
             InitializeComponent();
 #if DEBUG
-            this.AttachDevTools();
+            //this.AttachDevTools();
 #endif
         }
 
@@ -70,12 +70,12 @@ namespace GraphPrototype
         /// </summary>
         TimeSpan ReadingFrequency => TimeSpan.FromMinutes(5);
         /// <summary>
-        /// How many decimal places to show on the X Axis
+        /// How many decimal places to show on the Y Axis
         /// </summary>
         /// <remarks>
         /// F2: Two decimal places. F3: Three decimal places
         /// </remarks>
-        string XAxisFormat = "F2";
+        string YAxisFormat = "F2";
         /// <summary>
         /// What colour are the grid lines
         /// </summary>
@@ -119,7 +119,7 @@ namespace GraphPrototype
             
             // Take first reading
             var viewModel = DataContext as MainWindowViewModel;
-            UpdateViewModel(viewModel);
+            UpdateViewModel(viewModel, firstReading: true);
 
             // Prepare graph
             Graph = this.Find<AvaPlot>("avaPlot1");
@@ -133,9 +133,11 @@ namespace GraphPrototype
                 dataY[counter] = viewModel.Pressure;
             }
 
-            Series = Graph.plt.PlotScatter(dataX, dataY);
-            Graph.plt.Ticks(numericFormatStringY: XAxisFormat, dateTimeX: true, dateTimeFormatStringX: "HH:mm");
-            Graph.plt.Grid(color: GridLinesColor);
+            Series = Graph.Plot.AddScatter(dataX, dataY);
+            Graph.Plot.XAxis.TickLabelFormat("HH:mm", dateTimeFormat: true);
+            Graph.Plot.YAxis.TickLabelFormat(YAxisFormat, dateTimeFormat: false);
+            Graph.Plot.Grid(color: GridLinesColor);
+            Graph.Plot.AxisAuto();
             UpdateAxis(viewModel, autoAxis: true);
             Graph.Render();
 
@@ -156,10 +158,10 @@ namespace GraphPrototype
                 if (hasNewReading)
                 {
                     Log.Information("Updating Graph");
-                    Array.Copy(Series.xs, 1, Series.xs, 0, Series.xs.Length - 1);
-                    Array.Copy(Series.ys, 1, Series.ys, 0, Series.ys.Length - 1);
-                    Series.xs[Series.xs.Length - 1] = viewModel.ReadingTime.ToOADate();
-                    Series.ys[Series.ys.Length - 1] = viewModel.Pressure;
+                    Array.Copy(Series.Xs, 1, Series.Xs, 0, Series.Xs.Length - 1);
+                    Array.Copy(Series.Ys, 1, Series.Ys, 0, Series.Ys.Length - 1);
+                    Series.Xs[Series.Xs.Length - 1] = viewModel.ReadingTime.ToOADate();
+                    Series.Ys[Series.Ys.Length - 1] = viewModel.Pressure;
                     UpdateAxis(viewModel, autoAxis: AutoAxis || viewModel.DoAutoScroll);
                     viewModel.DoAutoScroll = false;
 
@@ -180,12 +182,12 @@ namespace GraphPrototype
             }
         }
 
-        private bool UpdateViewModel(MainWindowViewModel viewModel)
+        private bool UpdateViewModel(MainWindowViewModel viewModel, bool firstReading = false)
         {
             viewModel.CurrentTime = ClockSensor.Now;
 
             // Update the reading once the duration set by ReadingFrequency has passed
-            if (viewModel.ReadingTime + ReadingFrequency <= viewModel.CurrentTime)
+            if (viewModel.ReadingTime + ReadingFrequency <= viewModel.CurrentTime || firstReading)
             {
                 viewModel.Pressure = PressureSensor.ReadPressure();
                 viewModel.ReadingTime = RoundTime(viewModel.CurrentTime);
@@ -222,45 +224,45 @@ namespace GraphPrototype
             if (autoAxis)
             {
                 // Adjust X axis to current duration, latest reading on the right
-                Graph.plt.Axis(x1: (viewModel.ReadingTime - GraphDuration).ToOADate(), x2: viewModel.ReadingTime.ToOADate());
-                Graph.plt.AxisAutoY();
+                Graph.Plot.SetAxisLimits(xMin: (viewModel.ReadingTime - GraphDuration).ToOADate(), xMax: viewModel.ReadingTime.ToOADate());
+                Graph.Plot.AxisAutoY();
             }
             else
             {
-                var axisSettings = Graph.plt.Axis();
+                var axisSettings = Graph.Plot.GetAxisLimits();
 
-                if (axisSettings[AxisXMaxIndex] > viewModel.ReadingTime.ToOADate())
+                if (axisSettings.XMax > viewModel.ReadingTime.ToOADate())
                 {
                     // The graph is showing the future. Take no action
                     viewModel.EnableAutoScrollButton = true;
                 }
-                else if(axisSettings[AxisXMaxIndex] >= (viewModel.ReadingTime - XAxisAutoScrollSnap).ToOADate())
+                else if(axisSettings.XMax >= (viewModel.ReadingTime - XAxisAutoScrollSnap).ToOADate())
                 {
                     // The graph was showing the future, but our new reading goes off the end. Auto-scroll the X
-                    axisSettings[AxisXMinIndex] = (viewModel.ReadingTime - GraphDuration).ToOADate();
-                    axisSettings[AxisXMaxIndex] = viewModel.ReadingTime.ToOADate();
+                    double xMin = (viewModel.ReadingTime - GraphDuration).ToOADate();
+                    double xMax = viewModel.ReadingTime.ToOADate();
 
                     // Expand the Y so the new value fits on
-                    double readingValue = Series.ys[Series.ys.Length - 1];
+                    double readingValue = Series.Ys[Series.Ys.Length - 1];
                     double scrollAmount = 0;
-                    if (axisSettings[AxisYMinIndex] > readingValue)
+                    if (axisSettings.YMin > readingValue)
                     {
                         // New value is off the bottom, so scroll down
-                        double padding = (axisSettings[AxisYMaxIndex] - axisSettings[AxisYMinIndex]) * YAxisScrollPadding;
-                        scrollAmount = (readingValue - axisSettings[AxisYMinIndex]) - padding;
+                        double padding = (axisSettings.YMax - axisSettings.YMin) * YAxisScrollPadding;
+                        scrollAmount = (readingValue - axisSettings.YMin) - padding;
                     }
-                    else if (axisSettings[AxisYMaxIndex] < readingValue)
+                    else if (axisSettings.YMax < readingValue)
                     {
                         // New value is off the top, so scroll up
-                        double padding = (axisSettings[AxisYMaxIndex] - axisSettings[AxisYMinIndex]) * YAxisScrollPadding;
-                        scrollAmount = (readingValue - axisSettings[AxisYMaxIndex]) + padding;
+                        double padding = (axisSettings.YMax - axisSettings.YMin) * YAxisScrollPadding;
+                        scrollAmount = (readingValue - axisSettings.YMax) + padding;
                     }
 
-                    axisSettings[AxisYMinIndex] += scrollAmount;
-                    axisSettings[AxisYMaxIndex] += scrollAmount;
+                    double yMin = axisSettings.YMin + scrollAmount;
+                    double yMax = axisSettings.YMax + scrollAmount;
 
                     // Apply the axis settings
-                    Graph.plt.Axis(axisSettings);
+                    Graph.Plot.SetAxisLimits(new ScottPlot.AxisLimits(xMin, xMax, yMin, yMax));
                     viewModel.EnableAutoScrollButton = false;
                 }
                 else
@@ -282,6 +284,6 @@ namespace GraphPrototype
         private BMP3.ISensor PressureSensor { get; set; }
         private Clock.IClock ClockSensor { get; set; }
         private AvaPlot Graph { get; set; }
-        private ScottPlot.PlottableScatter Series { get; set; }
+        private ScottPlot.Plottable.ScatterPlot Series { get; set; }
     }
 }
