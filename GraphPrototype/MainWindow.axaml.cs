@@ -113,7 +113,7 @@ namespace GraphPrototype
             else
             {
                 PressureSensor = new BMP3.FakeSensor();
-                ClockSensor = new Clock.FakeClock { SpeedOfTime = 200 };
+                ClockSensor = new Clock.FakeClock { SpeedOfTime = 2000 };
             }
             
             
@@ -237,6 +237,7 @@ namespace GraphPrototype
                 else if(axisSettings[AxisXMaxIndex] >= (viewModel.ReadingTime - XAxisAutoScrollSnap).ToOADate())
                 {
                     // The graph was showing the future, but our new reading goes off the end. Auto-scroll the X
+                    axisSettings[AxisXMinIndex] = (viewModel.ReadingTime - GraphDuration).ToOADate();
                     axisSettings[AxisXMaxIndex] = viewModel.ReadingTime.ToOADate();
 
                     // Expand the Y so the new value fits on
