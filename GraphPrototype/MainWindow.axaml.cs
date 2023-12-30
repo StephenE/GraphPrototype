@@ -149,7 +149,7 @@ namespace GraphPrototype
 
         private void RefreshTimer_Tick(object sender, EventArgs e)
         {
-            Log.Information("Starting tick");
+            Log.Debug("Starting tick");
             try
             {
                 var viewModel = DataContext as MainWindowViewModel;
@@ -157,7 +157,7 @@ namespace GraphPrototype
 
                 if (hasNewReading)
                 {
-                    Log.Information("Updating Graph");
+                    Log.Debug("Updating Graph");
                     Array.Copy(Series.Xs, 1, Series.Xs, 0, Series.Xs.Length - 1);
                     Array.Copy(Series.Ys, 1, Series.Ys, 0, Series.Ys.Length - 1);
                     Series.Xs[Series.Xs.Length - 1] = viewModel.ReadingTime.ToOADate();
@@ -165,7 +165,7 @@ namespace GraphPrototype
                     UpdateAxis(viewModel, autoAxis: AutoAxis || viewModel.DoAutoScroll);
                     viewModel.DoAutoScroll = false;
 
-                    Log.Information("Rendering Graph");
+                    Log.Debug("Rendering Graph");
                     Graph.Render();
                 }
                 else if(viewModel.DoAutoScroll)
@@ -173,12 +173,12 @@ namespace GraphPrototype
                     UpdateAxis(viewModel, autoAxis: true);
                     viewModel.DoAutoScroll = false;
                 }
-                Log.Information("Ending tick");
+                Log.Debug("Ending tick");
             }
             catch(Exception error)
             {
                 Log.Fatal("Unhandled exception {0}", error);
-                throw error;
+                throw;
             }
         }
 

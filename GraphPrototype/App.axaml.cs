@@ -32,7 +32,11 @@ namespace GraphPrototype
 
         private static void SetupLogger()
         {
-            Log.Logger = new LoggerConfiguration().Enrich.WithExceptionDetails().MinimumLevel.Debug().WriteTo.File(LogPath, LogEventLevel.Verbose, "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}", null, 1073741824L, null, buffered: false, shared: false, null, RollingInterval.Day, rollOnFileSizeLimit: false, 31).CreateLogger();
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithExceptionDetails()
+                .MinimumLevel.Information()
+                .WriteTo.File(LogPath, LogEventLevel.Verbose, "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}", null, 1073741824L, null, buffered: false, shared: false, null, RollingInterval.Day, rollOnFileSizeLimit: false, 31)
+                .CreateLogger();
             Log.Debug("Log Created");
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
         }

@@ -24,6 +24,6 @@
         </Button.Styles>
       </Button>
     </StackPanel>
-	  <ScottPlotAva:AvaPlot x:Name="avaPlot1" Height="400" />
+	  <ScottPlotAva:AvaPlot x:Name="avaPlot1" Height="500" />
   </StackPanel>
 </Window>
